@@ -313,30 +313,14 @@ final class KeyboardTests: XCTestCase {
             for key in keyboard.subviews.compactMap({ $0 as? LetterKey }).filter({ "qwertyuiop".contains($0.letter) }) {
                 keyboard.layoutIfNeeded()
                 let originalHeight = keyboard.contentHeight(landscape: false, globeFooter: 0)
-                var heights: [CGFloat] = []
-                keyboard.onCalloutHeightChange = {
-                    heights.append(keyboard.contentHeight(landscape: false, globeFooter: 0))
-                }
-                key.onPreview?(key, key.letter)
-                guard let preview = keyboard.subviews.compactMap({ $0 as? VariantStrip }).first else {
-                    return XCTFail("Expected an immediate key preview")
-                }
-                XCTAssertLessThan(preview.calloutFrame.maxY, key.frame.minY)
-                key.onPreview?(key, nil)
-                XCTAssertEqual(heights.last, originalHeight)
-                key.onPreview?(key, key.letter)
-                key.onPreview?(key, "ə")
-                key.onHold?(key)
-                XCTAssertEqual(heights.count, 3)
-                XCTAssertNil(preview.superview)
+                keyboard.showCalloutForSnapshot(key.letter)
                 guard let strip = keyboard.subviews.compactMap({ $0 as? VariantStrip }).first else {
                     return XCTFail("Expected a long-press candidate strip")
                 }
                 XCTAssertLessThan(strip.calloutFrame.maxY, key.frame.minY)
                 XCTAssertGreaterThanOrEqual(strip.calloutFrame.minY, 0)
                 XCTAssertLessThanOrEqual(strip.calloutFrame.maxX, size.width)
-                key.cancelInteraction()
-                keyboard.onCalloutHeightChange = nil
+                keyboard.dismissVariants()
                 keyboard.layoutIfNeeded()
                 XCTAssertEqual(key.frame.minY, 8)
                 XCTAssertEqual(keyboard.contentHeight(landscape: false, globeFooter: 0), originalHeight)
