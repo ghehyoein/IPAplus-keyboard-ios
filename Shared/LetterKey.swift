@@ -63,22 +63,27 @@ final class LetterKey: UIControl {
     override func accessibilityActivate() -> Bool {
         onInsert?(uppercase ? letter.uppercased() : letter); return true
     }
+    // The input view can resize while the finger stays still.
+    private func screenPoint(for touch: UITouch) -> CGPoint {
+        guard let window else { return touch.location(in: nil) }
+        return window.convert(touch.location(in: window), to: window.screen.fixedCoordinateSpace)
+    }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         KeyFeedback.shared.keyDown()
-        start = touch.location(in: self); held = false; moved = false; direction = nil
+        start = screenPoint(for: touch); held = false; moved = false; direction = nil
         alpha = 0.9
         onPreview?(self, uppercase ? letter.uppercased() : letter)
         holdTimer?.invalidate()
         holdTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
             guard let self = self, !self.moved else { return }
-            self.held = true; self.onPreview?(self, nil); self.onHold?(self)
+            self.held = true; self.onHold?(self)
         }
     }
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         if held { onHoldMove?(touch.location(in: window), false); return }
-        let point = touch.location(in: self)
+        let point = screenPoint(for: touch)
         direction = KeyMotion.direction(dx: Double(point.x - start.x), dy: Double(point.y - start.y))
         if direction != nil { moved = true; holdTimer?.invalidate() }
         let value = direction.flatMap { mapping?.swipes[$0.rawValue] }

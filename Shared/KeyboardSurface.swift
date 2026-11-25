@@ -48,6 +48,7 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
     private var delayTimer: Timer?
     private var panelCategory = "diacritics"
     var onCalloutHeightChange: (() -> Void)?
+    private static let firstRowTop: CGFloat = 8
     private var calloutInset: CGFloat = 0
     private var previousSize = CGSize.zero
 
@@ -128,7 +129,7 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
         let available = max(140, bounds.height - footer - 8 - calloutInset)
         let rowPitch: CGFloat = min(metrics.rowPitch, (available + 11) / 4)
         let keyHeight = max(24, rowPitch - 11)
-        let top: CGFloat = 8 + calloutInset
+        let top = Self.firstRowTop + calloutInset
         for (r, row) in rows.enumerated() {
             // Five punctuation keys occupy exactly the seven-letter region.
             let middleWidth = 7 * keyWidth + 6 * gap
@@ -322,7 +323,12 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
     @objc private func nextKeyboard(_ sender: UIButton, event: UIEvent) { onNextKeyboard?(sender, event) }
     private func showPreview(key: LetterKey, value: String?) {
         touchPreview?.removeFromSuperview(); touchPreview = nil
-        guard let value = value, overlay == nil, variantStrip == nil else { return }
+        guard let value else {
+            if variantStrip == nil { setCalloutInset(0) }
+            return
+        }
+        guard overlay == nil, variantStrip == nil else { return }
+        prepareCallout(for: key)
         let bubble = VariantStrip(keyFrame: key.frame, base: value, variants: [], in: bounds, showsSelection: false)
         addSubview(bubble); touchPreview = bubble
     }
@@ -386,12 +392,16 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
         variantStrip?.cancel(); variantStrip?.removeFromSuperview(); variantStrip = nil
         setCalloutInset(0)
     }
+    private func prepareCallout(for key: LetterKey) {
+        let firstRow = rows.first?.contains(where: { $0 === key }) == true
+        let clearance = VariantStrip.selectionHeight + VariantStrip.keyGap + VariantStrip.topMargin
+        setCalloutInset(firstRow ? max(0, clearance - Self.firstRowTop) : 0)
+        layoutIfNeeded()
+    }
     private func showVariants(_ key: LetterKey) {
-        dismissVariants(); touchPreview?.removeFromSuperview(); touchPreview = nil
-        if rows.first?.contains(where: { $0 === key }) == true {
-            setCalloutInset(max(0, VariantStrip.selectionHeight + VariantStrip.keyGap + VariantStrip.topMargin - key.frame.minY))
-            layoutIfNeeded()
-        }
+        touchPreview?.removeFromSuperview(); touchPreview = nil
+        variantStrip?.cancel(); variantStrip?.removeFromSuperview()
+        prepareCallout(for: key)
         let variants = key.mapping?.variants ?? []
         let strip = VariantStrip(keyFrame: key.frame, base: key.uppercase ? key.letter.uppercased() : key.letter, variants: variants, in: bounds)
         addSubview(strip); variantStrip = strip
