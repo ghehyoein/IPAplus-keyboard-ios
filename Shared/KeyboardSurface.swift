@@ -47,8 +47,6 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
     private var repeatTimer: Timer?
     private var delayTimer: Timer?
     private var panelCategory = "diacritics"
-    var onCalloutHeightChange: (() -> Void)?
-    private var calloutInset: CGFloat = 0
     private var previousSize = CGSize.zero
 
     override init(frame: CGRect) {
@@ -97,7 +95,7 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
         updateLocalizedLabels()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: systemManagedLayout ? UIView.noIntrinsicMetric : ((isSymbolPanelVisible ? metrics.symbolContentHeight : metrics.letterContentHeight) + metrics.demoBottomInset + calloutInset)) }
+    override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: systemManagedLayout ? UIView.noIntrinsicMetric : ((isSymbolPanelVisible ? metrics.symbolContentHeight : metrics.letterContentHeight) + metrics.demoBottomInset)) }
 
     private func configure(_ button: UIButton, title: String, action: Selector?) {
         button.setTitle(title, for: .normal)
@@ -119,16 +117,16 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
         super.layoutSubviews()
         let width = bounds.width
         guard width > 0 else { return }
-        if previousSize != .zero && (previousSize.width != bounds.width || (calloutInset == 0 && previousSize.height != bounds.height)) { dismissVariants() }
+        if previousSize != .zero && previousSize != bounds.size { dismissVariants() }
         previousSize = bounds.size
         let gap: CGFloat = width < 360 ? 5 : 6
         let inset: CGFloat = 8.5
         let keyWidth = (width - inset * 2 - gap * 9) / 10
         let footer: CGFloat = systemManagedLayout ? (needsGlobe && !usesInlineGlobe ? 50 : 8) : metrics.demoBottomInset + 8
-        let available = max(140, bounds.height - footer - 8 - calloutInset)
+        let available = max(140, bounds.height - footer - 8)
         let rowPitch: CGFloat = min(metrics.rowPitch, (available + 11) / 4)
         let keyHeight = max(24, rowPitch - 11)
-        let top: CGFloat = 8 + calloutInset
+        let top: CGFloat = 8
         for (r, row) in rows.enumerated() {
             // Five punctuation keys occupy exactly the seven-letter region.
             let middleWidth = 7 * keyWidth + 6 * gap
@@ -375,23 +373,11 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
         }
         return panel
     }
-    private func setCalloutInset(_ inset: CGFloat) {
-        guard inset != calloutInset else { return }
-        calloutInset = inset
-        invalidateIntrinsicContentSize()
-        setNeedsLayout()
-        (onCalloutHeightChange ?? onHeightChange)?()
-    }
     func dismissVariants() {
         variantStrip?.cancel(); variantStrip?.removeFromSuperview(); variantStrip = nil
-        setCalloutInset(0)
     }
     private func showVariants(_ key: LetterKey) {
         dismissVariants(); touchPreview?.removeFromSuperview(); touchPreview = nil
-        if rows.first?.contains(where: { $0 === key }) == true {
-            setCalloutInset(max(0, VariantStrip.selectionHeight + VariantStrip.keyGap + VariantStrip.topMargin - key.frame.minY))
-            layoutIfNeeded()
-        }
         let variants = key.mapping?.variants ?? []
         let strip = VariantStrip(keyFrame: key.frame, base: key.uppercase ? key.letter.uppercased() : key.letter, variants: variants, in: bounds)
         addSubview(strip); variantStrip = strip
@@ -463,7 +449,7 @@ final class KeyboardSurface: UIView, UIInputViewAudioFeedback {
     }
     func contentHeight(landscape: Bool, globeFooter: CGFloat) -> CGFloat {
         let layout = KeyboardMetrics(width: bounds.width, isTablet: isTablet, landscape: landscape)
-        return (isSymbolPanelVisible ? layout.symbolContentHeight : layout.letterContentHeight) + globeFooter + calloutInset
+        return (isSymbolPanelVisible ? layout.symbolContentHeight : layout.letterContentHeight) + globeFooter
     }
     private func layoutSymbolPanel() {
         guard let panel = overlay else { return }

@@ -1,6 +1,5 @@
-## ipa+ keyboard 0.8.4
+## ipa+ keyboard 0.8.6
 
-- Long-pressing a top-row key temporarily creates room above the key for its phonetic variants. Releasing the key restores the compact layout.
-- Opt out of ASCII-capable keyboard selection for fields that request a Latin keyboard. The keyboard remains available in ordinary text fields.
+Restore the top-row long-press preview and variant menu from 0.8.3. Holding a key keeps the keyboard at its normal height. The extension retains the ASCII keyboard setting introduced in 0.8.4 for fields that request ASCII input.
 
-The unsigned IPA requires signing the app and its extension before installation. Requires iOS 17 or later.
+Download IPAKeyboard-unsigned.ipa and sign the app and keyboard extension before installation. Requires iOS 17 or later.
